@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import geopandas as gpd
 from matplotlib import pyplot as plt
@@ -40,13 +41,13 @@ def ais_csv_to_gdf(csv_filename: str) -> gpd.GeoDataFrame:
     return gdf.copy(deep=True)
 
 
-def ais_csv_to_df(csv_filename: str) -> pd.DataFrame:
+def ais_csv_to_df(csv_filename: str, timestamp_field_name: str = "BaseDateTime") -> pd.DataFrame:
     global df
     print("Loading data...")
     if df is not None:
         return df.copy(deep=True)
     print("Creating new DataFrame...")
-    temp_df: pd.DataFrame = pd.read_csv(csv_filename)
+    temp_df: pd.DataFrame = pd.read_csv(csv_filename, parse_dates=[timestamp_field_name])
     df = temp_df.copy(deep=True)
 
     return df.copy(deep=True)
@@ -77,11 +78,17 @@ def plot_gdf(gdf: gpd.GeoDataFrame):
 
 
 if __name__ == "__main__":
-    tgdf = ais_csv_to_gdf("data/AIS_2020_12_31.csv")
-    print(tgdf.columns)
-    print(tgdf.shape)
-    print(tgdf.dtypes)
-    print(tgdf.head())
+    tdf = ais_csv_to_df("data/AIS_2020_12_31.csv")
+    print(tdf[["BaseDateTime"]].head(10))
+    dfs = np.array_split(tdf, 2)
+    print("DFS[0]")
+    print(dfs[0])
+    print("DFS[1]")
+    print(dfs[1])
+    # print(tgdf.columns)
+    # print(tgdf.shape)
+    # print(tgdf.dtypes)
+    # print(tgdf.head())
     # mmsis = [366989380, 366685950, 367463740]
 
     # print(df.loc[df['MMSI'] == mmsis[0]][['BaseDateTime', 'LAT', 'LON']])
