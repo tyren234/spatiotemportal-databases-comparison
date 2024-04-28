@@ -19,16 +19,6 @@ print(f"Token: {token}")
 print(f"Organization id: {org}")
 print(f"Database endpoint: {url}")
 
-df = ais_csv_to_df("data/AIS_2020_12_31.csv")
-
-print("Connecting to InfluxDB...")
-client: InfluxDBClient = influxdb_client.InfluxDBClient(url=url, token=token, org=org)
-bucket = "temp_bucket_3"
-
-bucket = "main_bucket"
-
-write_api = client.write_api(write_options=SYNCHRONOUS)
-
 
 def create_point(row: pd.Series, measurement_name: str,
                  mmsi_fieldname="MMSI", vessel_name_fieldname="VesselName",
@@ -46,66 +36,52 @@ def create_point(row: pd.Series, measurement_name: str,
     return point
 
 
-# df["Points"] = df.apply(create_point, axis=1, args=("vessels_ais_31_12",))
+def upload_df_to_influx_in_batches(df: pd.DataFrame, influx_client: InfluxDBClient, bucket_name: str, organization_id: str,
+                                   batch_size: int = 100000):
+    print(f"Uploading to influxdb. Batch size: {batch_size}.")
+    write_api = influx_client.write_api(write_options=SYNCHRONOUS)
 
-print("Uwaga wielka komenda")
-# write_api.write(bucket=bucket, org=org, record=point)
-# df.set_index("BaseDateTime")
+    rows = df.shape[0]
+    divisions = rows // batch_size + 1
+    dfs = np.array_split(df, divisions)
 
-df = df[["MMSI", "VesselName", "LAT", "LON", "BaseDateTime"]]
-print(f"Dataframe shape: {df.shape}")
-df["VesselName"] = df["VesselName"].str.replace(" ", "_")
-# df = df[["MMSI", "LAT", "LON", "BaseDateTime"]].head(10000)
+    for i in range(divisions):
+        print(f"Uploading division {i}/{divisions - 1}. Shape: {dfs[i].shape}. Processing...")
+        write_api.write(bucket=bucket_name, org=organization_id,
+                        record=dfs[i],
+                        data_frame_measurement_name="vessels_ais_31_12",
+                        data_frame_tag_columns=["MMSI", "VesselName"],
+                        data_frame_timestamp_column="BaseDateTime",
+                        )
 
-# write_api.write(bucket=bucket, org=org, record=df,
-#                 data_frame_measurement_name="vessels_ais_31_12",
-#                 )
-divisions = 64
-dfs = np.array_split(df, divisions)
 
-for i in range(divisions):
-    print(f"Division {i}. shape: {dfs[i].shape}. Processing...")
-    write_api.write(bucket=bucket, org=org,
-                    record=dfs[i],
-                    data_frame_measurement_name="vessels_ais_31_12",
-                    data_frame_tag_columns=["MMSI", "VesselName"],
-                    # data_frame_tag_columns=["MMSI"],
-                    data_frame_timestamp_column="BaseDateTime",
-                    )
-
-# for value in range(5):
-#     point = (
-#         Point("measurement1")
-#         .tag("tagname1", "tagvalue1")
-#         .field("field1", value)
-#     )
-#     write_api.write(bucket=bucket, org="pw", record=point)
-#     time.sleep(1)  # separate points by 1 second
+print("Connecting to InfluxDB...")
+client: InfluxDBClient = influxdb_client.InfluxDBClient(url=url, token=token, org=org)
+bucket = "temp_bucket_4"
 
 # query_api = client.query_api()
-# query = """from(bucket: "main_bucket")
-#  |> range(start: -10m)
-#  |> filter(fn: (r) => r._measurement == "measurement1")"""
-# tables = query_api.query(query, org="pw")
-#
-# for table in tables:
-#   for record in table.records:
-#     print(record)
-
-# query_api = client.query_api()
-# query = """from(bucket: "main_bucket")
-#   |> range(start: -10   m)
-#   |> filter(fn: (r) => r._measurement == "measurement1")
-#   |> mean()"""
-#
-# query = """from(bucket: "main_bucket")
-#   |> range(start: -20d)
-#   |> filter(fn: (r) => r._measurement == "measurement1")
-#   |> mean()"""
+# query = """from(bucket: "temp_bucket_2")
+#  |> range(start: 2020-04-28)
+#  |> filter(fn: (r) => r._measurement == "vessels_ais_31_12" and r.MMSI == "211331640")"""
 # tables = query_api.query(query, org=org)
-# print(f"Tables: {tables}")
+#
 # for table in tables:
 #     for record in table.records:
 #         print(record)
+# client.close()
+# exit()
+
+
+# df["Points"] = df.apply(create_point, axis=1, args=("vessels_ais_31_12",))
+
+
+df = ais_csv_to_df("data/AIS_2020_12_31.csv")
+df = df[["MMSI", "VesselName", "LAT", "LON", "BaseDateTime"]]
+df["VesselName"] = df["VesselName"].str.replace(" ", "_")
+print(f"Dataframe shape: {df.shape}")
+
+print("Uwaga wielka komenda")
+upload_df_to_influx_in_batches(df, client, bucket, org)
+
 print("Closing database connection...")
 client.close()
