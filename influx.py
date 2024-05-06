@@ -1,23 +1,23 @@
+import time
+
 import numpy as np
 from dotenv import load_dotenv
 
+import logger_setup
+import logging
+
+logger = logging.getLogger()
+
+import pandas as pd
+from influxdb_client import InfluxDBClient
 # Ciekawy statek:
 # 215131000
 
-load_dotenv()
-import influxdb_client, os, time
-from influxdb_client import InfluxDBClient, Point, WritePrecision
+import os
+from influxdb_client import Point
 from influxdb_client.client.write_api import SYNCHRONOUS
-import pandas as pd
 
 from csv_reader import ais_csv_to_df
-
-token = os.environ.get("API_INFLUX_KEY")
-org = os.environ.get("INFLUX_ORG_ID")
-url = "http://localhost:" + os.environ.get("INFLUX_PORT", "55000")
-print(f"Token: {token}")
-print(f"Organization id: {org}")
-print(f"Database endpoint: {url}")
 
 
 def create_point(row: pd.Series, measurement_name: str,
@@ -36,9 +36,12 @@ def create_point(row: pd.Series, measurement_name: str,
     return point
 
 
-def upload_df_to_influx_in_batches(df: pd.DataFrame, influx_client: InfluxDBClient, bucket_name: str, organization_id: str,
-                                   batch_size: int = 100000):
-    print(f"Uploading to influxdb. Batch size: {batch_size}.")
+def upload_df_to_influx_in_batches(df: pd.DataFrame, influx_client: InfluxDBClient, bucket_name: str,
+                                   organization_id: str,
+                                   batch_size: int = 100000,
+                                   data_frame_tag_columns=["MMSI", "VesselName", "CallSign", "VesselType", "Status",
+                                                           "Length", "Width", "Cargo", "TransceiverClass"]):
+    logger.debug(f"Uploading to influxdb. Batch size: {batch_size}.")
     write_api = influx_client.write_api(write_options=SYNCHRONOUS)
 
     rows = df.shape[0]
@@ -46,42 +49,67 @@ def upload_df_to_influx_in_batches(df: pd.DataFrame, influx_client: InfluxDBClie
     dfs = np.array_split(df, divisions)
 
     for i in range(divisions):
-        print(f"Uploading division {i}/{divisions - 1}. Shape: {dfs[i].shape}. Processing...")
+        logger.debug(f"Uploading division {i}/{divisions - 1}. Shape: {dfs[i].shape}. Processing...")
         write_api.write(bucket=bucket_name, org=organization_id,
                         record=dfs[i],
                         data_frame_measurement_name="vessels_ais_31_12",
-                        data_frame_tag_columns=["MMSI", "VesselName"],
+                        data_frame_tag_columns=data_frame_tag_columns,
                         data_frame_timestamp_column="BaseDateTime",
                         )
 
 
-print("Connecting to InfluxDB...")
-client: InfluxDBClient = influxdb_client.InfluxDBClient(url=url, token=token, org=org)
-bucket = "temp_bucket_4"
+if __name__ == "__main__":
+    logger_setup.setup_logger()
+    load_dotenv()
+    token = os.environ.get("API_INFLUX_KEY")
+    org = os.environ.get("INFLUX_ORG_ID")
+    url = "http://localhost:" + os.environ.get("INFLUX_PORT", "55000")
 
-# query_api = client.query_api()
-# query = """from(bucket: "temp_bucket_2")
-#  |> range(start: 2020-04-28)
-#  |> filter(fn: (r) => r._measurement == "vessels_ais_31_12" and r.MMSI == "211331640")"""
-# tables = query_api.query(query, org=org)
-#
-# for table in tables:
-#     for record in table.records:
-#         print(record)
-# client.close()
-# exit()
+    logger.debug(f"Token: {token}")
+    logger.debug(f"Organization id: {org}")
+    logger.info(f"Database endpoint: {url}")
+    logger.debug("Connecting to InfluxDB...")
+    client: InfluxDBClient = InfluxDBClient(url=url, token=token, org=org)
+    bucket = "temp_bucket_2"
 
+    # query_api = client.query_api()
+    # query = """from(bucket: "temp_bucket_4")
+    #  |> range(start: 2020-12-31T00:00:00Z, stop: 2020-12-31T23:59:59Z)
+    #  |> filter(fn: (r) => r._measurement == "vessels_ais_31_12" and r.MMSI == "215131000")"""
+    # tables = query_api.query(query, org=org)
+    #
+    # for table in tables:
+    #     for record in table.records:
+    #         print(record)
+    # client.close()
+    # exit()
 
-# df["Points"] = df.apply(create_point, axis=1, args=("vessels_ais_31_12",))
+    # Uploading data one by one - slow
 
+    # df = ais_csv_to_df("data/AIS_2020_12_31.csv")
+    # df["VesselName"] = df["VesselName"].str.replace(" ", "\ ")
+    # print("Creating points...")
+    # df["Points"] = df.apply(create_point, axis=1, args=("vessels_ais_31_12",))
+    # write_api = client.write_api(write_options=SYNCHRONOUS)
+    # start_time = time.time()
+    # print("Uploading points...")
+    # for i, point in enumerate(df["Points"]):
+    #     if i % 1000 == 0 and i != 0:
+    #         print(f"Point {i}: {point}. Time elapsed: {time.time() - start_time}. Average time per point: {(time.time() - start_time) / i}")
+    #     write_api.write(bucket=bucket, org=org, record=point)
 
-df = ais_csv_to_df("data/AIS_2020_12_31.csv")
-df = df[["MMSI", "VesselName", "LAT", "LON", "BaseDateTime"]]
-df["VesselName"] = df["VesselName"].str.replace(" ", "_")
-print(f"Dataframe shape: {df.shape}")
+    # Uploading data do influx database in batches - fast
 
-print("Uwaga wielka komenda")
-upload_df_to_influx_in_batches(df, client, bucket, org)
+    df = ais_csv_to_df("data/AIS_2020_12_31.csv")
+    # df = df[["MMSI", "VesselName", "LAT", "LON", "BaseDateTime"]]
+    df["VesselName"] = df["VesselName"].str.replace(" ", "\ ")
+    df["CallSign"] = df["CallSign"].str.replace(" ", "\ ")
+    logger.debug(f"Dataframe shape: {df.shape}")
 
-print("Closing database connection...")
-client.close()
+    logger.debug("Beware! Executing The Command!")
+    start_time = time.time()
+    upload_df_to_influx_in_batches(df, client, bucket, org, 200000)
+    end_time = time.time()
+    logger.info(f"Upload time: {end_time - start_time}")
+    logger.info("Closing database connection...")
+    client.close()

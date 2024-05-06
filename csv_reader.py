@@ -3,6 +3,9 @@ import pandas as pd
 import geopandas as gpd
 from matplotlib import pyplot as plt
 from shapely.geometry import LineString, Point
+import logger_setup
+import logging
+logger = logging.getLogger()
 
 # 'MMSI', 'BaseDateTime', 'LAT', 'LON', 'SOG', 'COG', 'Heading', 'VesselName', 'IMO', 'CallSign', 'VesselType', 'Status', 'Length', 'Width', 'Draft', 'Cargo', 'TransceiverClass'
 
@@ -13,7 +16,7 @@ from shapely.geometry import LineString, Point
 # SOG                float                Speed over ground (knots)
 # COG                float                Course over ground (degrees)
 # Heading            float                Heading (degrees) of the vessel's hull. A value of 511 indicates there is no heading data.
-# VesselName         sting                Name of the vessel
+# VesselName         string                Name of the vessel
 # IMO                string               IMO number of the vessel
 # CallSign           string               Callsign of the vessel
 # VesselType         float                Type of the vessel according to AIS Specification
@@ -32,21 +35,21 @@ df: pd.DataFrame = None
 
 def ais_csv_to_gdf(csv_filename: str) -> gpd.GeoDataFrame:
     global gdf
-    print("Loading data...")
+    logger.debug("Loading data...")
     if gdf is not None:
         return gdf.copy(deep=True)
     temp_df = ais_csv_to_df(csv_filename)
-    print("Creating new GeoDataFrame...")
+    logger.debug("Creating new GeoDataFrame...")
     gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_xy(temp_df['LON'], temp_df['LAT']), crs=4326)
     return gdf.copy(deep=True)
 
 
 def ais_csv_to_df(csv_filename: str, timestamp_field_name: str = "BaseDateTime") -> pd.DataFrame:
     global df
-    print("Loading data...")
+    logger.debug("Loading data...")
     if df is not None:
         return df.copy(deep=True)
-    print("Creating new DataFrame...")
+    logger.debug("Creating new DataFrame...")
     temp_df: pd.DataFrame = pd.read_csv(csv_filename, parse_dates=[timestamp_field_name])
     df = temp_df.copy(deep=True)
 
@@ -54,11 +57,11 @@ def ais_csv_to_df(csv_filename: str, timestamp_field_name: str = "BaseDateTime")
 
 
 def plot_gdf(gdf: gpd.GeoDataFrame):
-    print("Starting plotting...")
+    logger.debug("Starting plotting...")
     fig, ax = plt.subplots()
     pd.options.display.max_columns = 6
 
-    print("Reading continents...")
+    logger.debug("Reading continents...")
     continents: gpd.GeoDataFrame = gpd.read_file("data/coastline/north_america.shp").to_crs(epsg=4326)
     continents.plot(ax=ax)
 
@@ -70,15 +73,20 @@ def plot_gdf(gdf: gpd.GeoDataFrame):
             return output
         return LineString(points.tolist())
 
-    print(f"Creating gdf_lines...")
+    logger.debug(f"Creating gdf_lines...")
     gdf_lines = gdf[["MMSI", "geometry"]].groupby('MMSI')["geometry"].apply(points_to_linestring_or_point)
-    print("Plotting...")
+    logger.debug("Plotting...")
     gdf_lines.head(100).plot(ax=ax)
     plt.show()
 
 
 if __name__ == "__main__":
+    logger_setup.setup_logger()
+
     tdf = ais_csv_to_df("data/AIS_2020_12_31.csv")
+    for i, point in enumerate(df["MMSI"]):
+        print(f"{i}: {point}")
+        exit()
     print(tdf[["BaseDateTime"]].head(10))
     dfs = np.array_split(tdf, 2)
     print("DFS[0]")
