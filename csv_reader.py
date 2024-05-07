@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
+import json
 import geopandas as gpd
 from matplotlib import pyplot as plt
 from shapely.geometry import LineString, Point
 import logger_setup
 import logging
+
 logger = logging.getLogger()
+
 
 # 'MMSI', 'BaseDateTime', 'LAT', 'LON', 'SOG', 'COG', 'Heading', 'VesselName', 'IMO', 'CallSign', 'VesselType', 'Status', 'Length', 'Width', 'Draft', 'Cargo', 'TransceiverClass'
 
@@ -29,31 +32,17 @@ logger = logging.getLogger()
 
 # MMSI, BaseDateTime,   LAT,    LON,    SOG,    COG,    Heading,    VesselName, IMO,    CallSign,   VesselType, Status, Length, Width,  Draft, Cargo,   TransceiverClass
 # Int,  date,           float,  float,  float,  float,  float,      string,     string, string,     int,        int,    float    float,    float, int,     string
-gdf: gpd.GeoDataFrame = None
-df: pd.DataFrame = None
-
 
 def ais_csv_to_gdf(csv_filename: str) -> gpd.GeoDataFrame:
-    global gdf
-    logger.debug("Loading data...")
-    if gdf is not None:
-        return gdf.copy(deep=True)
     temp_df = ais_csv_to_df(csv_filename)
     logger.debug("Creating new GeoDataFrame...")
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_xy(temp_df['LON'], temp_df['LAT']), crs=4326)
-    return gdf.copy(deep=True)
+    gdf = gpd.GeoDataFrame(temp_df, geometry=gpd.GeoSeries.from_xy(temp_df['LON'], temp_df['LAT']), crs=4326)
+    return gdf
 
 
 def ais_csv_to_df(csv_filename: str, timestamp_field_name: str = "BaseDateTime") -> pd.DataFrame:
-    global df
     logger.debug("Loading data...")
-    if df is not None:
-        return df.copy(deep=True)
-    logger.debug("Creating new DataFrame...")
-    temp_df: pd.DataFrame = pd.read_csv(csv_filename, parse_dates=[timestamp_field_name])
-    df = temp_df.copy(deep=True)
-
-    return df.copy(deep=True)
+    return pd.read_csv(csv_filename, parse_dates=[timestamp_field_name])
 
 
 def plot_gdf(gdf: gpd.GeoDataFrame):
@@ -80,19 +69,49 @@ def plot_gdf(gdf: gpd.GeoDataFrame):
     plt.show()
 
 
+def split_df_by_batch_size(df: pd.DataFrame | gpd.GeoDataFrame, batch_size: int) -> list[pd.DataFrame] | list[gpd.GeoDataFrame]:
+    if batch_size > len(df) or batch_size < 1:
+        raise ValueError("Batch size must be positive and not greater than number of rows")
+    start = 0
+    end = batch_size
+    dfs = []
+    while end < len(df):
+        dfs.append(df.iloc[start:end])
+        start += batch_size
+        end += batch_size
+    dfs.append(df.iloc[end-batch_size:])
+    return dfs
+
+
 if __name__ == "__main__":
     logger_setup.setup_logger()
 
-    tdf = ais_csv_to_df("data/AIS_2020_12_31.csv")
-    for i, point in enumerate(df["MMSI"]):
-        print(f"{i}: {point}")
-        exit()
-    print(tdf[["BaseDateTime"]].head(10))
-    dfs = np.array_split(tdf, 2)
-    print("DFS[0]")
-    print(dfs[0])
-    print("DFS[1]")
-    print(dfs[1])
+    tgdf = ais_csv_to_gdf("data/AIS_2020_12_31.csv")
+    print(tgdf.shape)
+    logger.debug("Setting up batch sizes and smaller dataframes...")
+    # batch_size = 6300000
+    # rows = tgdf.shape[0]
+    # divisions = rows // batch_size + 1
+    # dfs = np.array_split(tgdf, divisions)
+    split_point = 4000000
+    dfs = [tgdf.iloc[:split_point], tgdf.iloc[split_point:]]
+
+    logger.debug("Creating geojsons")
+    for i, df in enumerate(dfs):
+        logger.debug(f"Creating geojson {i + 1} from df of shape {df.shape}")
+        geojson = df.to_geo_dict(drop_id=True)
+        print(geojson["features"])
+
+    # for i, point in enumerate(df["MMSI"]):
+    #     print(f"{i}: {point}")
+    #     exit()
+    # print(tdf[["BaseDateTime"]].head(10))
+    # dfs = np.array_split(tdf, 2)
+    # print("DFS[0]")
+    # print(dfs[0])
+    # print("DFS[1]")
+    # print(dfs[1])
+
     # print(tgdf.columns)
     # print(tgdf.shape)
     # print(tgdf.dtypes)
