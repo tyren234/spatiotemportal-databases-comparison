@@ -84,7 +84,7 @@ def split_df_by_batch_size(df: pd.DataFrame | gpd.GeoDataFrame, batch_size: int)
 
 
 if __name__ == "__main__":
-    logger_setup.setup_logger()
+    logger_setup.setup_logging()
 
     tgdf = ais_csv_to_gdf("data/AIS_2020_12_31.csv")
     print(tgdf.shape)

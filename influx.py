@@ -59,7 +59,7 @@ def upload_df_to_influx_in_batches(df: pd.DataFrame, influx_client: InfluxDBClie
 
 
 if __name__ == "__main__":
-    logger_setup.setup_logger()
+    logger_setup.setup_logging()
     load_dotenv()
     token = os.environ.get("API_INFLUX_KEY")
     org = os.environ.get("INFLUX_ORG_ID")
