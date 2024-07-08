@@ -104,3 +104,20 @@ UPDATE routes
 SET geom = route::geometry;
 
 select st_astext(geom) from routes;
+
+-- druga tabela
+--     TODO: trzeba zrobić żeby mieć tabelę z tgeompointami, ale takimi, że każdy ma tylko współrzędne w jendym momencie. I potem z takiej tabeli robić dynamicznie tgeompointseq
+-- Utworzenie tabeli
+drop table routes2;
+CREATE TABLE routes2
+(
+    mmsi  int,
+    route tgeompointseq
+);
+
+select a.mmsi,
+       tgeompointseq(array(select tgeompoint(geom, basedatetime)
+                                     from aisdata as b
+                                     where b.mmsi = a.mmsi
+                                     order by b.basedatetime))::geometry
+from (select distinct mmsi from aisdata where mmsi = 338064000 ) as a;
