@@ -115,9 +115,9 @@ CREATE TABLE routes2
     route tgeompointseq
 );
 
-select a.mmsi,
-       tgeompointseq(array(select tgeompoint(geom, basedatetime)
+select * from
+        (select tgeompointseq(array(select tgeompoint(geom, basedatetime)
                                      from aisdata as b
                                      where b.mmsi = a.mmsi
                                      order by b.basedatetime))::geometry
-from (select distinct mmsi from aisdata where mmsi = 338064000 ) as a;
+from (select distinct mmsi from aisdata where mmsi = 338064000 ) as a) as p;
