@@ -143,3 +143,8 @@ SELECT mmsi,
 FROM position_sequences;
 
 
+-- Step 6: Remove not needed tables and check the output out!
+
+drop table temp_vessel_positions;
+select *, route::geometry from aggregated_vessel_positions;
+
