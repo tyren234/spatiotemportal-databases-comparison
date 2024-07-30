@@ -36,23 +36,40 @@ select timestamps(route)
 from aggregated_vessel_positions;
 
 -- Time query
-select astext(attime(route,
+select mmsi, astext(attime(route,
                      tstzspan('[2020-12-31T00:00:00Z, 2020-12-31T00:59:00Z]')
               ))
 from aggregated_vessel_positions;
+-- where mmsi = 338866000;
 
 -- Spatial query
-select *
-from aggregated_vessel_positions_SPGIST
+select mmsi, starttimestamp(route), endtimestamp(route)
+from aggregated_vessel_positions
+where eintersects(st_setsrid(ST_MakeEnvelope(-88.0, 41.80, -87.0, 41.87), 4326), route);
+
+select mmsi, atgeometry(
+             route,
+             st_setsrid(ST_MakeEnvelope(-88.0, 41.80, -87.0, 41.87), 4326)
+             )
+from aggregated_vessel_positions;
+
+-- Spatiotemporal query
+
+select mmsi, (attime(route,
+                     tstzspan('[2020-12-31T00:00:00Z, 2020-12-31T12:00:00Z]')
+              )
+    ) as route
+from aggregated_vessel_positions
 where eintersects(st_setsrid(ST_MakeEnvelope(-88.0, 41.80, -87.0, 41.87), 4326), route);
 
 
-select *
-from (select atgeometrytime(
-                     route,
-                     st_setsrid(ST_MakeEnvelope(-88.0, 41.80, -87.0, 41.87), 4326),
-                     tstzspan('[2020-12-31T00:00:00Z, 2020-12-31T23:59:00Z]')
-             ) as vessels
-      from aggregated_vessel_positions) as a
-where a.vessels <> null;
+-- select *
+-- from (select atgeometrytime(
+--                      route,
+--                      st_setsrid(ST_MakeEnvelope(-88.0, 41.80, -87.0, 41.87), 4326),
+--                      tstzspan('[2020-12-31T00:00:00Z, 2020-12-31T00:59:00Z]')
+--              ) as vessels
+--       from aggregated_vessel_positions) as a
+-- where a.vessels <> null;
+
 
