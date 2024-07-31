@@ -47,11 +47,11 @@ select mmsi, starttimestamp(route), endtimestamp(route)
 from aggregated_vessel_positions
 where eintersects(st_setsrid(ST_MakeEnvelope(-88.0, 41.80, -87.0, 41.87), 4326), route);
 
-select mmsi, atgeometry(
-             route,
-             st_setsrid(ST_MakeEnvelope(-88.0, 41.80, -87.0, 41.87), 4326)
-             )
-from aggregated_vessel_positions;
+-- select mmsi, atgeometry(
+--              route,
+--              st_setsrid(ST_MakeEnvelope(-88.0, 41.80, -87.0, 41.87), 4326)
+--              )
+-- from aggregated_vessel_positions;
 
 -- Spatiotemporal query
 
