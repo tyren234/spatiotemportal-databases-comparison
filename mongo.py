@@ -12,6 +12,10 @@ from pymongo.database import Database, Collection
 import logger_setup
 from csv_reader import ais_csv_to_gdf
 
+import pandas as pd
+
+
+
 
 def upload_df_to_mongo():
     load_dotenv()
@@ -19,7 +23,7 @@ def upload_df_to_mongo():
 
     start_time = time.time()
     tgdf = ais_csv_to_gdf("data/AIS_2020_12_31.csv")  # .head(1000)
-    # tgdf['BaseDateTime'] = tgdf['BaseDateTime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    tgdf['BaseDateTime'] = pd.to_datetime(tgdf['BaseDateTime'], format='%Y-%m-%d %H:%M:%S')
     end_time = time.time()
     logger.info(f"Pandas creating geodataframe time: {end_time - start_time} seconds.")
     logger.debug(f"creating geojson")
@@ -33,7 +37,7 @@ def upload_df_to_mongo():
     # print(geojson["features"])
 
     mongo_url = f"mongodb://localhost:{mongo_port}/"
-    database_name = "aisdata"
+    database_name = "temp"
     collection_name = "aisdata31-12-2020"
 
     client: MongoClient = MongoClient(mongo_url)
