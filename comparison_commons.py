@@ -261,7 +261,7 @@ def log_spatiotemporal_info(iteration: int, iterations_no: int, time_passed: flo
                             no_results: int, timespan: Timespan, bbox: Bbox):
     start, end = timespan.get_start_end()
     logger.info(
-        f"{iteration}/{iterations_no}. Query time: {time_passed}, time per result: {time_per_result}, no. of results: {no_results}, bbox id: {bbox.get_id()}, timespan: {start}-{end}")
+        f"{iteration}/{iterations_no}. Query time: {time_passed}, time per result: {time_per_result}, no. of results: {no_results}, bbox id: {bbox.get_id()}, timespan id: {timespan.get_id()}timespan: {start}-{end}")
 
 
 def get_results_dataframe(times_table: list, no_results_table: list, bounding_boxes_table: list | None,
@@ -477,8 +477,7 @@ def measure_mongo_spatiotemporal(create_results: bool = False, bounding_boxes_ta
         time_passed = get_time_passed(start_time, end_time)
         time_per_result = get_time_per_result(time_passed, no_results)
 
-        logger.info(
-            f"{iteration}/{no_of_iterations}. Query time: {time_passed}, time per result: {time_per_result}, no. of results: {no_results}, timespan: {start}-{end}")
+        log_spatiotemporal_info(iteration, no_of_iterations, time_passed, time_per_result, no_results, timespan, bbox)
 
         mongo_spatiotemporal_no_results.append(no_results)
         mongo_spatiotemporal_times.append(time_passed)
@@ -490,8 +489,9 @@ def measure_mongo_spatiotemporal(create_results: bool = False, bounding_boxes_ta
     client.close()
 
     if export_csv_filename:
-        return get_results_dataframe(mongo_spatiotemporal_times, mongo_spatiotemporal_no_results, bounding_boxes_table,
-                                     timespans_table, export_csv_filename, directory="./data/results/mongo")
+        return get_results_dataframe(mongo_spatiotemporal_times, mongo_spatiotemporal_no_results,
+                                     bounding_boxes_table[:no_of_iterations], timespans_table[:no_of_iterations],
+                                     export_csv_filename, directory="./data/results/mongo")
 
 # InfluxDB
 
@@ -790,8 +790,6 @@ def measure_mobility_spatiotemporal(create_results: bool = False, bounding_boxes
         time_per_result = get_time_per_result(time_passed, no_results)
 
         log_spatiotemporal_info(iteration, no_of_iterations, time_passed, time_per_result, no_results, timespan, bbox)
-        logger.info(
-            f"{iteration}/{no_of_iterations}. Query time: {time_passed}, time per result: {time_per_result}, no. of results: {no_results}, timespan: {start}-{end}")
 
         mobility_spatiotemporal_no_results.append(no_results)
         mobility_spatiotemporal_times.append(time_passed)
@@ -803,5 +801,5 @@ def measure_mobility_spatiotemporal(create_results: bool = False, bounding_boxes
 
     if export_csv_filename:
         return get_results_dataframe(mobility_spatiotemporal_times, mobility_spatiotemporal_no_results,
-                                     bounding_boxes_table, timespans_table, export_csv_filename,
+                                     bounding_boxes_table[:no_of_iterations], timespans_table[:no_of_iterations], export_csv_filename,
                                      directory="./data/results/mobility")
