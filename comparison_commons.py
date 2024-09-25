@@ -261,7 +261,7 @@ def log_spatiotemporal_info(iteration: int, iterations_no: int, time_passed: flo
                             no_results: int, timespan: Timespan, bbox: Bbox):
     start, end = timespan.get_start_end()
     logger.info(
-        f"{iteration}/{iterations_no}. Query time: {time_passed}, time per result: {time_per_result}, no. of results: {no_results}, bbox id: {bbox.get_id()}, timespan id: {timespan.get_id()}timespan: {start}-{end}")
+        f"{iteration}/{iterations_no}. Query time: {time_passed}, time per result: {time_per_result}, no. of results: {no_results}, bbox id: {bbox.get_id()}, timespan id: {timespan.get_id()}, timespan: {start}-{end}")
 
 
 def get_results_dataframe(times_table: list, no_results_table: list, bounding_boxes_table: list | None,
@@ -589,9 +589,6 @@ def measure_influx_temporal(create_results: bool = False, iteration_table: list 
         time_per_result = get_time_per_result(time_passed, no_results)
 
         log_time_info(timespan.get_id(), len(iteration_table), time_passed, time_per_result, no_results, timespan)
-
-        # influx_time_results.append(influx_time_result)
-        influx_time_times.append(time_passed)
 
         client.close()
 
