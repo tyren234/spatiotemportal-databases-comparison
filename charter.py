@@ -88,7 +88,7 @@ def load_files(file_patterns: dict):
                     df = pd.read_csv(file)
                     combined_df = pd.concat([combined_df, df], ignore_index=True)
                 except Exception as e:
-                    print(f"Could not process file {file}. Error: {e}")
+                    logger.error(f"Could not process file {file}. Error: {e}")
         if 'Id' in combined_df.columns:
             combined_df.drop(columns=['Id'], inplace=True)
         db_dataframes[db_name] = combined_df
@@ -101,7 +101,7 @@ def plot_comparison(db_dataframes, column_to_group, title, ylabel, save_location
             grouped_avg = df.groupby(column_to_group)['Query time'].mean()
             grouped_avg.plot(label=db_name, marker='o', linestyle='--')
         else:
-            print(f"Column {column_to_group} is not available or empty for {db_name}.")
+            logger.info(f"Column {column_to_group} is not available or empty for {db_name}.")
 
     plt.title(title)
     plt.xlabel(column_to_group)
@@ -242,7 +242,7 @@ def compare_timespans_no_results(file_patterns):
                 plt.ylabel("Average Number of Results")
                 plt.grid(axis='y')
             else:
-                print(f"No valid 'Timespan id' column in {db_name} for plotting.")
+                logger.warn(f"No valid 'Timespan id' column in {db_name} for plotting.")
         plt.show()
 
 def compare_bboxes_avg_time(file_patterns, save_location="/"):
@@ -263,7 +263,7 @@ def compare_bboxes_avg_time(file_patterns, save_location="/"):
 
                 all_bbox_data.append(grouped_results)
             else:
-                print(f"No valid 'Bbox id' column in {db_name} for plotting.")
+                logger.warn(f"No valid 'Bbox id' column in {db_name} for plotting.")
         plt.tight_layout()
         plt.savefig(f"{save_location}/{db_name}_time_per_bbox.png")
         plt.show()
@@ -298,7 +298,7 @@ def compare_timespans_avg_time(file_patterns, save_location="/"):
 
                 all_timespan_data.append(grouped_results)
             else:
-                print(f"No valid 'Timespan id' column in {db_name} for plotting.")
+                logger.warn(f"No valid 'Timespan id' column in {db_name} for plotting.")
         plt.tight_layout()
         plt.savefig(f"{save_location}/{db_name}_time_per_timespan.png")
         plt.show()
@@ -315,6 +315,42 @@ def compare_timespans_avg_time(file_patterns, save_location="/"):
         plt.savefig(f"{save_location}/time_per_timespan.png")
         plt.show()
 
+def calculate_temporal_averages(file_patterns):
+    db_dataframes = load_files(file_patterns)
+
+    temporal_averages = {}
+    for db_name, df in db_dataframes.items():
+        if 'Timespan id' in df.columns and df['Timespan id'].notna().all():
+            avg_time = df['Query time'].mean()
+            temporal_averages[db_name] = avg_time
+        else:
+            logger.warn(f"No valid temporal data for {db_name}.")
+    return temporal_averages
+
+def calculate_spatial_averages(file_patterns):
+    db_dataframes = load_files(file_patterns)
+
+    spatial_averages = {}
+    for db_name, df in db_dataframes.items():
+        if 'Bbox id' in df.columns and df['Bbox id'].notna().all():
+            avg_time = df['Query time'].mean()
+            spatial_averages[db_name] = avg_time
+        else:
+            logger.warn(f"No valid spatial data for {db_name}.")
+    return spatial_averages
+
+def calculate_spatiotemporal_averages(file_patterns):
+    db_dataframes = load_files(file_patterns)
+
+    spatiotemporal_averages = {}
+    for db_name, df in db_dataframes.items():
+        if ('Timespan id' in df.columns and df['Timespan id'].notna().all() and
+            'Bbox id' in df.columns and df['Bbox id'].notna().all()):
+            avg_time = df['Query time'].mean()
+            spatiotemporal_averages[db_name] = avg_time
+        else:
+            logger.warn(f"No valid spatiotemporal data for {db_name}.")
+    return spatiotemporal_averages
 
 mongo_temporal_results = os.path.join(MONGO_RESULT_DIR, MONGO_FILENAME + DELIMITER_FILENAME + TEMPORAL_FILENAME + WILDCARD + SUFFIX_FILENAME)
 mongo_spatial_results = os.path.join(MONGO_RESULT_DIR, MONGO_FILENAME + DELIMITER_FILENAME + SPATIAL_FILENAME + WILDCARD + SUFFIX_FILENAME)
@@ -341,9 +377,22 @@ file_patterns_timespans = {
     "mongodb": [mongo_temporal_results],
     "mobilitydb": [mobility_temporal_results],
 }
+file_patterns_spatiotemporal = {
+    "mongodb": [mongo_spatiotemporal_results],
+    "mobilitydb": [mobility_spatiotemporal_results],
+}
 
-compare_databases(file_patterns_all, SAVE_LOCATION)
-compare_bboxes_avg_time(file_patterns_bboxes, SAVE_LOCATION)
-compare_timespans_avg_time(file_patterns_timespans, SAVE_LOCATION)
+# This will show and save the plots
+# compare_databases(file_patterns_all, SAVE_LOCATION)
+# compare_bboxes_avg_time(file_patterns_bboxes, SAVE_LOCATION)
+# compare_timespans_avg_time(file_patterns_timespans, SAVE_LOCATION)
 
+# This will print the final results
+space = calculate_spatial_averages(file_patterns_bboxes)
+time = calculate_temporal_averages(file_patterns_timespans)
+spacetime = calculate_spatial_averages(file_patterns_spatiotemporal)
+
+print(f"Space: {space}")
+print(f"Time: {time}")
+print(f"Spacetime: {spacetime}")
 
