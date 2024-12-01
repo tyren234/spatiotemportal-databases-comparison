@@ -383,9 +383,9 @@ file_patterns_spatiotemporal = {
 }
 
 # This will show and save the plots
-# compare_databases(file_patterns_all, SAVE_LOCATION)
-# compare_bboxes_avg_time(file_patterns_bboxes, SAVE_LOCATION)
-# compare_timespans_avg_time(file_patterns_timespans, SAVE_LOCATION)
+compare_databases(file_patterns_all, SAVE_LOCATION)
+compare_bboxes_avg_time(file_patterns_bboxes, SAVE_LOCATION)
+compare_timespans_avg_time(file_patterns_timespans, SAVE_LOCATION)
 
 # This will print the final results
 space = calculate_spatial_averages(file_patterns_bboxes)
