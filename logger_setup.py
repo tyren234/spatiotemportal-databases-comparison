@@ -1,6 +1,4 @@
 import logging.handlers
-import os
-
 
 def setup_logging(level=logging.DEBUG):
     format = "%(asctime)s - %(levelname)s: %(message)s"
