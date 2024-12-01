@@ -294,7 +294,8 @@ def get_results_dataframe(times_table: list, no_results_table: list, bounding_bo
 def mongo_setup():
     mongo_url = "mongodb://localhost:" + os.environ.get("MONGO_PORT", "55000")
     mongo_database = "temp"
-    mongo_collection = "aisdata31-12-2020"
+    mongo_collection = "aisdata31-12-2020" # wihout index
+    mongo_collection = "aisdata" # with index
 
     logger.info(f"MongoDB endpoint: {mongo_url}")
     logger.info(f"MongoDB database name: {mongo_database}")
