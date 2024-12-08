@@ -64,16 +64,16 @@ def load_combine_and_plot_results(files: str|list):
 
     if has_bbox:
         avg_query_time_per_bbox = combined_df.groupby('Bbox id')['Query time'].mean()
-        avg_query_time_per_bbox.plot(kind='bar', figsize=(12, 6), title="Average Query Time per Bbox", color='orange')
-        plt.ylabel("Average Query Time (s)")
+        avg_query_time_per_bbox.plot(kind='bar', figsize=(12, 6), title="Średni czas zapytania, a prostokąt ograniczający", color='orange')
+        plt.ylabel("Średni czas zapytania (s)")
         plt.grid(False)
         plt.show()
 
     if has_timespan:
         avg_query_time_per_timespan = combined_df.groupby('Timespan id')['Query time'].mean()
-        avg_query_time_per_timespan.plot(kind='bar', figsize=(12, 6), title="Average Query Time per Timespan",
+        avg_query_time_per_timespan.plot(kind='bar', figsize=(12, 6), title="Średni czas zapytania, a okres",
                                          color='purple')
-        plt.ylabel("Average Query Time (s)")
+        plt.ylabel("Średni czas zapytania (s)")
         plt.grid(False)
         plt.show()
 
@@ -108,7 +108,7 @@ def plot_comparison(db_dataframes, column_to_group, title, ylabel, save_location
     plt.ylabel(ylabel)
     plt.legend()
     plt.grid(True)
-    plt.savefig(f"{save_location}/{title.lower().replace(' ', '_').replace(':', '')}.png")
+    plt.savefig(f"{save_location}/{title.lower().replace(' ', '_').replace(':', '').replace(',', '')}.png")
     plt.show()
 
 def plot_comparison_bar(db_dataframes, column_to_group, title, ylabel, plot_values: bool = False, save_location="/"):
@@ -145,7 +145,7 @@ def plot_comparison_bar(db_dataframes, column_to_group, title, ylabel, plot_valu
                         rotation=90,
                         fontsize=10
                     )
-    plt.savefig(f"{save_location}/{title.lower().replace(' ', '_').replace(':', '')}{('_annotated' if plot_values else '')}.png")
+    plt.savefig(f"{save_location}/{title.lower().replace(' ', '_').replace(':', '').replace(',', '')}{('_annotated' if plot_values else '')}.png")
     plt.show()
 '''
 file patterns should look like this:
@@ -162,24 +162,24 @@ def compare_databases(file_patterns, save_location="/"):
     plot_comparison(
         db_dataframes,
         column_to_group='Bbox id',
-        title="Average Time for Each Bbox: MobilityDB vs MongoDB",
-        ylabel="Average Query Time (s)",
+        title="Średni czas wykonania dla każdego prostokąta ograniczającego MobilityDB, a MongoDB",
+        ylabel="Średni czas wykonania (s)",
         save_location=save_location
     )
 
     plot_comparison(
         db_dataframes,
         column_to_group='Timespan id',
-        title="Average Time for Each Timespan: InfluxDB vs MobilityDB vs MongoDB",
-        ylabel="Average Query Time (s)",
+        title="Średni czas wykonania dla każdego okresu: InfluxDB, a MobilityDB, a MongoDB",
+        ylabel="Średni czas wykonania (s)",
         save_location=save_location
     )
 
     plot_comparison_bar(
         db_dataframes,
         column_to_group='Bbox id',
-        title="Average Time for Each Bbox: MobilityDB vs MongoDB",
-        ylabel="Average Query Time (s)",
+        title="Średni czas wykonania dla każdego prostokąta ograniczającego MobilityDB, a MongoDB",
+        ylabel="Średni czas wykonania (s)",
         plot_values = True,
         save_location=save_location
     )
@@ -187,16 +187,16 @@ def compare_databases(file_patterns, save_location="/"):
     plot_comparison_bar(
         db_dataframes,
         column_to_group='Bbox id',
-        title="Average Time for Each Bbox: MobilityDB vs MongoDB",
-        ylabel="Average Query Time (s)",
+        title="Średni czas wykonania dla każdego prostokąta ograniczającego MobilityDB, a MongoDB",
+        ylabel="Średni czas wykonania (s)",
         save_location=save_location
     )
 
     plot_comparison_bar(
         db_dataframes,
         column_to_group='Timespan id',
-        title="Average Time for Each Timespan: InfluxDB vs MobilityDB vs MongoDB",
-        ylabel="Average Query Time (s)",
+        title="Średni czas wykonania dla każdego okresu: InfluxDB, a MobilityDB, a MongoDB",
+        ylabel="Średni czas wykonania (s)",
         plot_values=True,
         save_location=save_location
     )
@@ -204,8 +204,8 @@ def compare_databases(file_patterns, save_location="/"):
     plot_comparison_bar(
         db_dataframes,
         column_to_group='Timespan id',
-        title="Average Time for Each Timespan: InfluxDB vs MobilityDB vs MongoDB",
-        ylabel="Average Query Time (s)",
+        title="Średni czas wykonania dla każdego okresu: InfluxDB, a MobilityDB, a MongoDB",
+        ylabel="Średni czas wykonania (s)",
         save_location=save_location
     )
 
@@ -221,9 +221,9 @@ def compare_bboxes_no_results(file_patterns):
             if 'Bbox id' in df.columns and df['Bbox id'].notna().any():
                 grouped_results = df.groupby('Bbox id')['No results'].sum()
                 grouped_results.plot(kind='bar', color='blue', alpha=0.7)
-                plt.title(f"Number of Results per Bbox for {db_name}")
+                plt.title(f"Liczba wyników, a prostokąt ograniczający dla {db_name}")
                 plt.xlabel("Bbox id")
-                plt.ylabel("Number of Results")
+                plt.ylabel("Liczba wyników")
                 plt.grid(axis='y')
             else:
                 logger.error(f"No valid 'Bbox id' column in {db_name} for plotting.")
@@ -237,9 +237,9 @@ def compare_timespans_no_results(file_patterns):
             if 'Timespan id' in df.columns and df['Timespan id'].notna().any():
                 grouped_results = df.groupby('Timespan id')['No results'].mean()
                 grouped_results.plot(kind='bar', color='green', alpha=0.7)
-                plt.title(f"Average Number of Results per Timespan for {db_name}")
-                plt.xlabel("Timespan id")
-                plt.ylabel("Average Number of Results")
+                plt.title(f"Średnia liczba wyników, a okres dla {db_name}")
+                plt.xlabel("Identyfikator okresu")
+                plt.ylabel("Średnia liczba wyników")
                 plt.grid(axis='y')
             else:
                 logger.warn(f"No valid 'Timespan id' column in {db_name} for plotting.")
@@ -256,9 +256,9 @@ def compare_bboxes_avg_time(file_patterns, save_location="/"):
             if 'Bbox id' in df.columns and df['Bbox id'].notna().any():
                 grouped_results = df.groupby('Bbox id')['Query time'].mean()
                 grouped_results.plot(kind='bar', color='green', alpha=0.7)
-                plt.title(f"Average Time per Bbox for {db_name}")
-                plt.xlabel("Bbox id")
-                plt.ylabel("Average Time (s)")
+                plt.title(f"Średni czas wykonania, a prostokąt ograniczający dla {db_name}")
+                plt.xlabel("Identyfikator prostokąta ograniczającego")
+                plt.ylabel("Średni czas wykonania (s)")
                 plt.grid(axis='y')
 
                 all_bbox_data.append(grouped_results)
@@ -272,9 +272,9 @@ def compare_bboxes_avg_time(file_patterns, save_location="/"):
         overall_avg = pd.concat(all_bbox_data, axis=1).mean(axis=1)
         plt.figure(figsize=(12, 6))
         overall_avg.plot(kind='bar', color='blue', alpha=0.7)
-        plt.title("Overall Average Time per Bbox Across All Databases")
-        plt.xlabel("Bbox id")
-        plt.ylabel("Overall Average Time (s)")
+        plt.title("Średni czas wykonania, a prostokąt ograniczający dla wszystkich baz danych")
+        plt.xlabel("Identyfikator prostokąta ograniczającego")
+        plt.ylabel("Średni czas wykonania (s)")
         plt.grid(axis='y')
         plt.tight_layout()
         plt.savefig(f"{save_location}/time_per_bbox.png")
@@ -291,9 +291,9 @@ def compare_timespans_avg_time(file_patterns, save_location="/"):
             if 'Timespan id' in df.columns and df['Timespan id'].notna().any():
                 grouped_results = df.groupby('Timespan id')['Query time'].mean()
                 grouped_results.plot(kind='bar', color='green', alpha=0.7)
-                plt.title(f"Average Time per Timespan for {db_name}")
-                plt.xlabel("Timespan id")
-                plt.ylabel("Average Time (s)")
+                plt.title(f"Średni czas wykonania, a okres dla {db_name}")
+                plt.xlabel("Identyfikator okresu")
+                plt.ylabel("Średni czas wykonania (s)")
                 plt.grid(axis='y')
 
                 all_timespan_data.append(grouped_results)
@@ -307,9 +307,9 @@ def compare_timespans_avg_time(file_patterns, save_location="/"):
         overall_avg = pd.concat(all_timespan_data, axis=1).mean(axis=1)
         plt.figure(figsize=(12, 6))
         overall_avg.plot(kind='bar', color='blue', alpha=0.7)
-        plt.title("Overall Average Time per Timespan Across All Databases")
-        plt.xlabel("Timespan id")
-        plt.ylabel("Overall Average Time (s)")
+        plt.title("Średni czas wykonania, a okres dla wszystkich baz danych")
+        plt.xlabel("Identyfikator okresu")
+        plt.ylabel("Średni czas wykonania (s)")
         plt.grid(axis='y')
         plt.tight_layout()
         plt.savefig(f"{save_location}/time_per_timespan.png")
